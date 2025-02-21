@@ -34,6 +34,7 @@ async def run(pc,recorder, signaling, role):
         await signaling.send(pc.localDescription)
        
         qr = qrcode.QRCode(
+            version=40,
             box_size=1,  # Use small 1x1 'pixels' in ASCII
             border=1,    # Minimal border
             )
