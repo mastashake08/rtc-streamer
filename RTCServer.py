@@ -38,7 +38,7 @@ async def run(pc,recorder, signaling, role):
             border=1,    # Minimal border
             )
         try:
-            qr.add_data(pc.localDescription)
+            qr.add_data(pc.localDescription.sdp)
         except:
             compressed_bytes = zlib.compress(pc.localDescription.sdp.encode("utf-8"))
             b64_compressed = base64.urlsafe_b64encode(compressed_bytes).decode("ascii")
