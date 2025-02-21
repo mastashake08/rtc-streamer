@@ -28,16 +28,21 @@ async def run(pc,recorder, signaling, role):
 
     if role == "offer":
         # send offer
-        await pc.setLocalDescription(await pc.createOffer())
-        # await signaling.send(pc.localDescription)
-        compressed_bytes = zlib.compress(pc.localDescription.sdp.encode("utf-8"))
-        b64_compressed = base64.urlsafe_b64encode(compressed_bytes).decode("ascii")
 
+        await pc.createDataChannel('Test')
+        await pc.setLocalDescription(await pc.createOffer())
+        await signaling.send(pc.localDescription)
+       
         qr = qrcode.QRCode(
             box_size=1,  # Use small 1x1 'pixels' in ASCII
             border=1,    # Minimal border
             )
-        qr.add_data(b64_compressed)
+        try:
+            qr.add_data(pc.localDescription)
+        except:
+            compressed_bytes = zlib.compress(pc.localDescription.sdp.encode("utf-8"))
+            b64_compressed = base64.urlsafe_b64encode(compressed_bytes).decode("ascii")
+            qr.add_data(b64_compressed)
         qr.make(fit=True)
 
         # Print ASCII QR code in the terminal.
@@ -73,10 +78,9 @@ if __name__ == "__main__":
     # create signaling and peer connection
     signaling = create_signaling(args)
     pc = RTCPeerConnection()
-
     # add recvonly transceiver
-    pc.addTransceiver("audio", direction="recvonly")
-    pc.addTransceiver("video", direction="recvonly")
+    # pc.addTransceiver("audio", direction="recvonly")
+    # pc.addTransceiver("video", direction="recvonly")
    
 
     # create media sink
