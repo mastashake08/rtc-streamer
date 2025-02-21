@@ -1,27 +1,22 @@
 import argparse
 import asyncio
 import logging
-import math
-
+import qrcode
+import zlib
+import base64
 
 from aiortc import (
     RTCIceCandidate,
     RTCPeerConnection,
     RTCSessionDescription,
-    VideoStreamTrack,
 )
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
+from aiortc.contrib.media import MediaBlackhole, MediaRecorder
 from aiortc.contrib.signaling import BYE, add_signaling_arguments, create_signaling
-from av import VideoFrame
 
 
-async def run(pc, player, recorder, signaling, role):
-    def add_tracks():
-        if player and player.audio:
-            pc.addTrack(player.audio)
 
-        if player and player.video:
-            pc.addTrack(player.video)
+async def run(pc,recorder, signaling, role):
+ 
        
     @pc.on("track")
     def on_track(track):
@@ -34,7 +29,20 @@ async def run(pc, player, recorder, signaling, role):
     if role == "offer":
         # send offer
         await pc.setLocalDescription(await pc.createOffer())
-        await signaling.send(pc.localDescription)
+        # await signaling.send(pc.localDescription)
+        compressed_bytes = zlib.compress(pc.localDescription.sdp.encode("utf-8"))
+        b64_compressed = base64.urlsafe_b64encode(compressed_bytes).decode("ascii")
+
+        qr = qrcode.QRCode(
+            box_size=1,  # Use small 1x1 'pixels' in ASCII
+            border=1,    # Minimal border
+            )
+        qr.add_data(b64_compressed)
+        qr.make(fit=True)
+
+        # Print ASCII QR code in the terminal.
+        # 'invert=True' switches black/white in ASCII, which can help scanning.
+        qr.print_ascii(invert=True)
 
     # consume signaling
     while True:
@@ -44,11 +52,6 @@ async def run(pc, player, recorder, signaling, role):
             await pc.setRemoteDescription(obj)
             await recorder.start()
 
-            if obj.type == "offer":
-                # send answer
-                add_tracks()
-                await pc.setLocalDescription(await pc.createAnswer())
-                await signaling.send(pc.localDescription)
         elif isinstance(obj, RTCIceCandidate):
             await pc.addIceCandidate(obj)
         elif obj is BYE:
@@ -59,7 +62,6 @@ async def run(pc, player, recorder, signaling, role):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Video stream from the command line")
     parser.add_argument("role", choices=["offer", "answer"])
-    parser.add_argument("--play-from", help="Read the media from a file and sent it.")
     parser.add_argument("--record-to", help="Write received media to a file.")
     parser.add_argument("--verbose", "-v", action="count")
     add_signaling_arguments(parser)
@@ -72,13 +74,10 @@ if __name__ == "__main__":
     signaling = create_signaling(args)
     pc = RTCPeerConnection()
 
+    # add recvonly transceiver
     pc.addTransceiver("audio", direction="recvonly")
     pc.addTransceiver("video", direction="recvonly")
-    # create media source
-    if args.play_from:
-        player = MediaPlayer(args.play_from)
-    else:
-        player = None
+   
 
     # create media sink
     if args.record_to:
@@ -92,14 +91,13 @@ if __name__ == "__main__":
         loop.run_until_complete(
             run(
                 pc=pc,
-                player=player,
                 recorder=recorder,
                 signaling=signaling,
                 role=args.role,
             )
         )
     except KeyboardInterrupt:
-        pass
+        logging.info("Shutting Down...")
     finally:
         # cleanup
         loop.run_until_complete(recorder.stop())
