@@ -29,7 +29,7 @@ async def run(pc,recorder, signaling, role):
     if role == "offer":
         # send offer
 
-        await pc.createDataChannel('Test')
+        pc.createDataChannel('Test')
         await pc.setLocalDescription(await pc.createOffer())
         await signaling.send(pc.localDescription)
        
@@ -79,8 +79,8 @@ if __name__ == "__main__":
     signaling = create_signaling(args)
     pc = RTCPeerConnection()
     # add recvonly transceiver
-    # pc.addTransceiver("audio", direction="recvonly")
-    # pc.addTransceiver("video", direction="recvonly")
+    pc.addTransceiver("audio", direction="recvonly")
+    pc.addTransceiver("video", direction="recvonly")
    
 
     # create media sink
