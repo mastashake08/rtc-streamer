@@ -15,7 +15,7 @@ from aiortc.contrib.signaling import BYE, add_signaling_arguments, create_signal
 
 
 
-async def run(pc,recorder, signaling, role):
+async def run(pc: RTCSessionDescription,recorder: MediaRecorder, signaling, role: str):
  
        
     @pc.on("track")
@@ -39,11 +39,12 @@ async def run(pc,recorder, signaling, role):
             border=1,    # Minimal border
             )
         try:
-            qr.add_data(pc.localDescription.sdp)
-        except:
             compressed_bytes = zlib.compress(pc.localDescription.sdp.encode("utf-8"))
             b64_compressed = base64.urlsafe_b64encode(compressed_bytes).decode("ascii")
             qr.add_data(b64_compressed)
+           
+        except:
+            qr.add_data(pc.localDescription.sdp)
         qr.make(fit=True)
 
         # Print ASCII QR code in the terminal.
