@@ -1,9 +1,6 @@
 import argparse
 import asyncio
 import logging
-import qrcode
-import zlib
-import base64
 
 from aiortc import (
     RTCIceCandidate,
@@ -29,27 +26,9 @@ async def run(pc: RTCSessionDescription,recorder: MediaRecorder, signaling, role
     if role == "offer":
         # send offer
 
-        pc.createDataChannel('Test')
         await pc.setLocalDescription(await pc.createOffer())
         await signaling.send(pc.localDescription)
-       
-        qr = qrcode.QRCode(
-            version=40,
-            box_size=1,  # Use small 1x1 'pixels' in ASCII
-            border=1,    # Minimal border
-            )
-        try:
-            compressed_bytes = zlib.compress(pc.localDescription.sdp.encode("utf-8"))
-            b64_compressed = base64.urlsafe_b64encode(compressed_bytes).decode("ascii")
-            qr.add_data(b64_compressed)
-           
-        except:
-            qr.add_data(pc.localDescription.sdp)
-        qr.make(fit=True)
-
-        # Print ASCII QR code in the terminal.
-        # 'invert=True' switches black/white in ASCII, which can help scanning.
-        qr.print_ascii(invert=True)
+  
 
     # consume signaling
     while True:
